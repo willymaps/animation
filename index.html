@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='utf-8' />
+<title>GTHA</title>
+<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+<script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.51.0/mapbox-gl.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.51.0/mapbox-gl.css' rel='stylesheet' />
+<script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
+<style>
+#insetWrap {
+    height:650px;
+    display: block;
+    width:100%;
+    position: relative;
+}
+#mapHold {
+    display: block;
+    max-width:1400px;
+    margin: auto;
+    height:500px;
+    position: relative;
+    pointer-events:none;
+    font-family: sans-serif;
+}
+#map {
+    height:500px;
+    width:100%;
+    position: absolute;
+    top:0;
+}
+
+#infoHold {
+    position: absolute;
+    display: block;
+    margin:auto;
+    top: 50%;
+    transform: translateY(-50%);
+    /* bottom:0; */
+    left:0;
+    right:0;
+    width:170px;
+    z-index:100;
+}
+</style>
+</head>
+<body>
+<div id="insetWrap">
+    <div id="mapHold">
+        <div id="infoHold">
+            First import a geojson.
+        </div>
+        <div id='map'></div>
+    </div>
+</div>
+<script>
+var stage = 1;
+var shape = {
+    "type":"GeometryCollection", "geometries": [
+        {"type":"Polygon","coordinates":[[[-0.00010175676142645691,0.08977906820011469],[0.008703279897823284,0.08934650448609349],[0.01742351883249875,0.08805297919934545],[0.02597497900164174,0.08591094978374403],[0.03427530486338679,0.08294104529212375],[0.042244559530194244,0.07917186770528328],[0.04980599462305216,0.07463971646402362],[0.05688678940895535,0.06938823886844242],[0.06341875210261995,0.06346800971281533],[0.06933897657866499,0.05693604420594076],[0.07459044817079609,0.04985524886923237],[0.07912259272563878,0.042293815701941746],[0.08289176362599349,0.03432456544894281],[0.08586166209609641,0.026024246296284245],[0.08800368674417605,0.017472794748530335],[0.08929720897899084,0.00875256580567231],[0.08972977165056335,-0.000052460147359353434],[0.08929720900414892,-0.008857486101629944],[0.08800368679352545,-0.017577715048157125],[0.08586166216774062,-0.026129166601869477],[0.08289176371717928,-0.03442948576254668],[0.07912259283286197,-0.04239873602531639],[0.07459044828993612,-0.04996016920375444],[0.06933897670514341,-0.05704096455255842],[0.06341875223157625,-0.06357293007201209],[0.05688678953543383,-0.06949315924021822],[0.04980599474219229,-0.0747446368478951],[0.04224455963741758,-0.07927678810030216],[0.03427530495457275,-0.08304596569691344],[0.025974979073286088,-0.08601587019655241],[0.01742351888184823,-0.08815789961811225],[0.00870327992298146,-0.08945142490852949],[-0.00010175676142644591,-0.0898839886237896],[-0.008906793445834348,-0.08945142490852949],[-0.017627032404701124,-0.08815789961811227],[-0.02617849259613899,-0.08601587019655242],[-0.034478818477425614,-0.08304596569691346],[-0.04244807316027048,-0.07927678810030217],[-0.05000950826504522,-0.07474463684789509],[-0.057090303058286704,-0.06949315924021823],[-0.06362226575442914,-0.06357293007201209],[-0.06954249022799633,-0.05704096455255842],[-0.07479396181278898,-0.049960169203754505],[-0.07932610635571484,-0.04239873602531643],[-0.0830952772400322,-0.03442948576254666],[-0.08606517569059353,-0.026129166601869477],[-0.08820720031637833,-0.017577715048157184],[-0.08950072252700184,-0.008857486101629944],[-0.08993328517341626,-0.00005246014735937543],[-0.08950072250184374,0.00875256580567227],[-0.08820720026702897,0.01747279474853033],[-0.08606517561894933,0.02602424629628423],[-0.08309527714884639,0.03432456544894282],[-0.07932610624849169,0.042293815701941746],[-0.07479396169364905,0.04985524886923232],[-0.06954249010151789,0.05693604420594076],[-0.06362226562547288,0.06346800971281533],[-0.0570903029318083,0.06938823886844238],[-0.05000950814590508,0.07463971646402362],[-0.042448073053047194,0.07917186770528327],[-0.03447881838623969,0.08294104529212376],[-0.026178492524494747,0.085910949783744],[-0.017627032355351704,0.08805297919934543],[-0.008906793420676188,0.08934650448609349],[-0.00010175676142645691,0.08977906820011469]]]}
+    ]
+}
+
+var extent = [
+    [-0.5,-0.5],
+    [0.5,0.5]
+];
+
+var initExtent = [
+    [-0.12,-0.12],
+    [0.12,0.12]
+];
+
+var explore = false;
+var initDraw = true;
+var animated = false;
+var rectCollection = [];
+
+var geojsonPoint = {
+    "type": "FeatureCollection",
+    "features": [{
+        "type": "Feature",
+        "geometry": {
+            "type": "LineString",
+            "coordinates": [
+        
+            ]
+        }
+    }]
+};
+
+mapboxgl.accessToken = 'pk.eyJ1IjoidHdlYXRoZXJidXJuIiwiYSI6IllqeWNoS28ifQ.LX7mJDglVdZODqd25Z8aeg';
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/empty-v9',
+    center: [0,0],
+    bearing: 0,
+    pitch:0,
+    maxBounds: extent,
+    minZoom: 8,
+    maxZoom: 12,
+    zoom: 10
+});
+
+map.scrollZoom.disable();
+var zoomControl = new mapboxgl.NavigationControl();
+map.addControl(zoomControl);
+
+function initLine() {
+
+    if (stage == 1) {
+        setTimeout(function() {
+            stage = 2;
+            initLine();
+        }, 1000);
+
+        getText();
+        
+        map.setPaintProperty('shapeLine', 'fill-opacity', 1);
+        map.setLayoutProperty('animatedPoint', 'visibility', 'none');
+        map.setLayoutProperty('animatedLine', 'visibility', 'none');
+
+    } else if (stage == 2) {
+
+        setTimeout(function() {
+            createLine();
+        }, 2000);
+        
+    } else if (stage == 3) {
+        setTimeout(function() {
+            createLine();
+        }, 3000);
+
+    } else if (stage == 4) {
+        stage = 1;
+        setTimeout(function() {
+            initLine();
+        }, 5000);
+    }
+}
+
+function getText() {
+
+    var infoText = document.getElementById('infoHold');
+
+    if (stage == 1) {
+
+        infoText.innerHTML = "First import a geojson.";
+
+    } else if (stage == 2) {
+
+        infoText.innerHTML = "Then use turf.js and the functions " + '<code>lineDistance</code>' + " and " + '<code>along</code>' + " to draw equally spaced points along the geojson.";
+
+    } else if (stage == 3) {
+
+        infoText.innerHTML = "To draw the line, we iterate through each point and use Mapbox's " + '<code>setData</code>' + " to update the line with each new coordinate."
+
+    }
+}
+
+function createLine() {
+
+    getText();
+
+    geojsonPoint.features[0].geometry.coordinates = [];
+
+    // get the extent of the polygon you want to highlight
+    let extentArray = shape.geometries[0].coordinates[0];
+
+    // create a turf linestring based on the polygon coordinates
+    const line = turf.lineString(extentArray);
+
+    // convert into a feature collection
+    const lineCollection = turf.featureCollection([line]);
+
+    // calculate the total length of the line
+    const lineDistance = turf.lineDistance(line);
+
+    // create an empty feature collection
+    rectCollection = turf.featureCollection([]);
+
+    // how many points you want along the path (more = smoother animation)
+    const rects = 40;
+
+    // calculate the distance between each point on the path
+    const segments = lineDistance / rects;
+
+    // what units do you want to use?
+    const units = 'kilometers';
+
+    // how quickly do you want to iterate through the points?
+    const speedunits = 50;
+
+    // get speed
+    const speed = segments*speedunits;
+
+    // based on the number of points...
+    for(let i = 0; i <= rects; i++) {
+
+        // calculate point location for each segment
+        const pointonline = turf.along(line, (segments * i));
+
+        // push these coordinates to the feature collection we created
+        rectCollection.features.push(pointonline);
+
+        // once 'i' equals the number of points then we're done building our line 
+        if (i == rects) {
+            console.log('animate');
+            animateLine(rects,speed);
+        }
+    }
+}
+
+
+function animateLine(rects, speed) {
+    if (stage == 2) {
+        map.setPaintProperty('shapeLine', 'fill-opacity', 0.25);
+        map.setLayoutProperty('animatedPoint', 'visibility', 'visible');
+        map.setPaintProperty('animatedPoint', 'circle-opacity', 1);
+    } else if (stage == 3) {
+        map.setPaintProperty('animatedPoint', 'circle-opacity', 0.1);
+        map.setLayoutProperty('animatedLine', 'visibility', 'visible');
+    }
+
+    for (let i = 0; i <= rects; i++) {
+        (function(index) {
+            animateTimeout = setTimeout(function() {
+                changeCenter(index);
+
+                var getBearing = 360/rects;
+                var getDirection = 0;
+
+                for (let p = 0; p < i; p++ ) {
+                    getDirection = getDirection + getBearing;
+                }
+
+                map.flyTo({
+                    center: [0,0],
+                    bearing: getDirection
+                });
+                
+                if (i == rects) {
+                    console.log('done drawing');
+                    stage++;
+                    initLine();
+                }
+
+            }, i * speed);
+        })(i);
+    }
+}
+
+function changeCenter(index) {
+    let centerX = rectCollection.features[index].geometry.coordinates[0];
+    let centerY = rectCollection.features[index].geometry.coordinates[1];
+    geojsonPoint.features[0].geometry.coordinates.push([centerX, centerY]);
+
+    if (stage == 2) {
+        map.getSource('pointSource').setData(geojsonPoint);
+    } else if (stage == 3) {
+        map.getSource('lineSource').setData(geojsonPoint);
+    }
+}
+
+map.on('load', function () {
+    map.addSource('lineSource', {
+        "type": "geojson",
+        "data": geojsonPoint
+    });
+
+    map.addSource('pointSource', {
+        "type": "geojson",
+        "data": geojsonPoint
+    });
+
+    map.addSource('shapeSource', {
+        "type": "geojson",
+        "data": shape
+    });
+
+    map.addLayer({
+      "id": "animatedLine",
+      "type": "line",
+      "source": "lineSource",
+      'paint': {
+            'line-opacity': 1,
+            'line-color': '#333',
+            'line-width': 3.5
+       },
+       'layout': {
+           'visibility': 'none'
+       }
+    });
+
+    map.addLayer({
+      "id": "shapeLine",
+      "type": "fill",
+      "source": "shapeSource",
+      'paint': {
+            'fill-opacity': 1,
+            'fill-color': '#d3d3d3'
+       }
+    });
+
+    map.addLayer({
+      "id": "animatedPoint",
+      "type": "circle",
+      "source": "pointSource",
+      'paint': {
+            'circle-radius': 5,
+            'circle-opacity': 0.2,
+            'circle-color': '#333'
+      },
+      'layout': {
+           'visibility': 'none'
+       }
+    });
+
+    initLine();
+
+    map.fitBounds(initExtent, {padding: -50});
+    
+    console.log('map loaded');
+
+});
+
+</script>
+</body>
+</html>
